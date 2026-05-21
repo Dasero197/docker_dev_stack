@@ -1,0 +1,408 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  🐳  DEV STACK — Python · JavaScript · Dart/Flutter
+#  Reverse proxy : Traefik  →  accès par domaine *.local
+#
+#  Profils disponibles :
+#    - db        : MySQL, PostgreSQL, MongoDB, Redis
+#    - db_tools  : phpMyAdmin, pgAdmin, Mongo Express, Adminer
+#    - devtools  : Portainer (Traefik démarre toujours par défaut)
+#    - messaging : Mailpit, RabbitMQ, Soketi
+#    - storage   : MinIO
+#    - automation: n8n
+#    - data      : JupyterLab
+#
+#  Démarrez toute la stack : docker compose up -d
+#  Ou par profil : docker compose --profile db --profile db_tools up -d
+#  Ou configurez COMPOSE_PROFILES dans votre fichier .env
+# ═══════════════════════════════════════════════════════════════════════════
+
+name: devstack
+
+networks:
+  devnet:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  postgres_data:
+  redis_data:
+  mongo_data:
+  minio_data:
+  portainer_data:
+  pgadmin_data:
+  rabbitmq_data:
+  n8n_data:
+  jupyter_data:
+
+services:
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  REVERSE PROXY — Traefik (Toujours actif)                                ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+  traefik:
+    image: traefik:v3.2
+    container_name: traefik
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=devstack_devnet
+      - --entrypoints.web.address=:80
+      - --log.level=WARN
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-ui.rule=Host(`traefik.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.routers.traefik-ui.service=api@internal"
+    restart: unless-stopped
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  BASES DE DONNÉES (Profil: db)                                           ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-server
+    profiles: ["db"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-${GLOBAL_DB_NAME:-devdb}}
+      MYSQL_USER: ${MYSQL_USER:-${GLOBAL_USER:-devuser}}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init/mysql:/docker-entrypoint-initdb.d
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    networks:
+      - devnet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: dasero197/postgres-semver:17.9
+    container_name: postgres-server
+    profiles: ["db"]
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      POSTGRES_USER: ${POSTGRES_USER:-${GLOBAL_USER:-devuser}}
+      POSTGRES_DB: ${POSTGRES_DB:-${GLOBAL_DB_NAME:-devdb}}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init/postgres:/docker-entrypoint-initdb.d
+    networks:
+      - devnet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-${GLOBAL_USER:-devuser}} -d ${POSTGRES_DB:-${GLOBAL_DB_NAME:-devdb}}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis/redis-stack:latest
+    container_name: redis-stack
+    profiles: ["db"]
+    environment:
+      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}} --loglevel warning"
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    volumes:
+      - redis_data:/data
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redisinsight.rule=Host(`redis.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.redisinsight.loadbalancer.server.port=8001"
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    container_name: mongo-server
+    profiles: ["db"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-${GLOBAL_USER:-devuser}}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-${GLOBAL_DB_NAME:-devdb}}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./init/mongo:/docker-entrypoint-initdb.d
+    networks:
+      - devnet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  ADMINISTRATION DES BDD (Profil: db_tools)                               ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    profiles: ["db_tools"]
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: ${PMA_USER:-root}
+      PMA_PASSWORD: ${PMA_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      UPLOAD_LIMIT: 256M
+      MEMORY_LIMIT: 512M
+      MAX_EXECUTION_TIME: 300
+    networks:
+      - devnet
+    depends_on:
+      mysql:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    profiles: ["db_tools"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-dev@${DOMAIN_SUFFIX:-local}.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - devnet
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    profiles: ["db_tools"]
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME:-${GLOBAL_USER:-devuser}}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      ME_CONFIG_MONGODB_URL: "mongodb://${MONGO_INITDB_ROOT_USERNAME:-${GLOBAL_USER:-devuser}}:${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}@mongo:27017/"
+      ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      ME_CONFIG_OPTIONS_EDITORTHEME: "dracula"
+    networks:
+      - devnet
+    depends_on:
+      mongo:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mongo-express.rule=Host(`mongo.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    profiles: ["db_tools"]
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+      ADMINER_DESIGN: "dracula"
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adminer.rule=Host(`adminer.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.adminer.loadbalancer.server.port=8080"
+    restart: unless-stopped
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  MESSAGERIE & EVENTS (Profil: messaging)                                 ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    profiles: ["messaging"]
+    ports:
+      - "1025:1025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+      MP_MAX_MESSAGES: 1000
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mailpit.rule=Host(`mail.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.mailpit.loadbalancer.server.port=8025"
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    profiles: ["messaging"]
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-${GLOBAL_USER:-devuser}}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-devhost}
+    ports:
+      - "5672:5672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
+    restart: unless-stopped
+
+  soketi:
+    image: quay.io/soketi/soketi:latest-16-alpine
+    container_name: soketi
+    profiles: ["messaging"]
+    environment:
+      SOKETI_DEFAULT_APP_ID: ${SOKETI_DEFAULT_APP_ID:-devapp}
+      SOKETI_DEFAULT_APP_KEY: ${SOKETI_DEFAULT_APP_KEY:-devkey}
+      SOKETI_DEFAULT_APP_SECRET: ${SOKETI_DEFAULT_APP_SECRET:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      SOKETI_DEBUG: "0"
+    ports:
+      - "6001:6001"
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.soketi.rule=Host(`soketi.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.soketi.loadbalancer.server.port=9601"
+    restart: unless-stopped
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  STOCKAGE OBJET (Profil: storage)                                        ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    profiles: ["storage"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-${GLOBAL_USER:-devuser}}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+    ports:
+      - "9000:9000"
+    volumes:
+      - minio_data:/data
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.rule=Host(`minio.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.minio.loadbalancer.server.port=9001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  GESTION DOCKER (Profil: devtools)                                       ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    profiles: ["devtools"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    restart: unless-stopped
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  AUTOMATION (Profil: automation)                                         ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    profiles: ["automation"]
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      N8N_HOST: n8n.${DOMAIN_SUFFIX:-local}
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://n8n.${DOMAIN_SUFFIX:-local}/
+      GENERIC_TIMEZONE: Africa/Porto-Novo
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: ${N8N_DB_POSTGRESDB_USER:-${GLOBAL_USER:-devuser}}
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_POSTGRESDB_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - devnet
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+    restart: unless-stopped
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  DATA SCIENCE / PYTHON (Profil: data)                                    ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+  jupyter:
+    image: jupyter/datascience-notebook:latest
+    container_name: jupyter
+    profiles: ["data"]
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+      JUPYTER_TOKEN: ${JUPYTER_TOKEN:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      GRANT_SUDO: "yes"
+    volumes:
+      - jupyter_data:/home/jovyan/work
+      - ./notebooks:/home/jovyan/work/notebooks
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jupyter.rule=Host(`jupyter.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.jupyter.loadbalancer.server.port=8888"
+    restart: unless-stopped
