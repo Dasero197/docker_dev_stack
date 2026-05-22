@@ -1,0 +1,2 @@
+CREATE DATABASE sonar;
+CREATE DATABASE hoppscotch;

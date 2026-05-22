@@ -20,6 +20,45 @@ fi
 
 MARKER="# ── devstack local domains ──"
 
+# Génération du fichier openapi dummy s'il n'existe pas
+if [ ! -f "openapi/openapi.json" ]; then
+  echo "🆕 Création d'un fichier openapi.json dummy..."
+  mkdir -p openapi
+  cat << 'EOF' > openapi/openapi.json
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Dummy API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/ping": {
+      "get": {
+        "summary": "Ping endpoint",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": "pong"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+EOF
+  # Ajuster les permissions si exécuté avec sudo
+  if [ -n "$SUDO_USER" ]; then
+    chown -R "$SUDO_USER" openapi
+  fi
+fi
+
 DOMAINS=(
   "traefik.local"
   "phpmyadmin.local"

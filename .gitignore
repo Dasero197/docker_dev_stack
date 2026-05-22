@@ -3,13 +3,7 @@
 .env.*
 !.env.example
 
-# Local data and initialization scripts
-init/mysql/*
-!init/mysql/.gitkeep
-init/postgres/*
-!init/postgres/.gitkeep
-init/mongo/*
-!init/mongo/.gitkeep
+# Local data
 
 # Notebooks
 notebooks/*

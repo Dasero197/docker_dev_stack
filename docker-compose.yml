@@ -84,7 +84,6 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./init/mysql:/docker-entrypoint-initdb.d
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -111,7 +110,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init/postgres:/docker-entrypoint-initdb.d
+      - ./internal/postgres:/docker-entrypoint-initdb.d:ro
     networks:
       - devnet
     restart: unless-stopped
@@ -152,7 +151,6 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-      - ./init/mongo:/docker-entrypoint-initdb.d
     networks:
       - devnet
     restart: unless-stopped
