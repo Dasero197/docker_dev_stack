@@ -33,6 +33,10 @@ volumes:
   rabbitmq_data:
   n8n_data:
   jupyter_data:
+  meilisearch_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
 
 services:
 
@@ -40,7 +44,7 @@ services:
 # ║  REVERSE PROXY — Traefik (Toujours actif)                                ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
   traefik:
-    image: traefik:v3.2
+    image: traefik:v3.7.1
     container_name: traefik
     command:
       - --api.dashboard=true
@@ -72,10 +76,10 @@ services:
     container_name: mysql-server
     profiles: ["db"]
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-${GLOBAL_PASSWORD}}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-${GLOBAL_DB_NAME:-devdb}}
       MYSQL_USER: ${MYSQL_USER:-${GLOBAL_USER:-devuser}}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-${GLOBAL_PASSWORD}}
     ports:
       - "3306:3306"
     volumes:
@@ -99,7 +103,7 @@ services:
     container_name: postgres-server
     profiles: ["db"]
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${GLOBAL_PASSWORD}}
       POSTGRES_USER: ${POSTGRES_USER:-${GLOBAL_USER:-devuser}}
       POSTGRES_DB: ${POSTGRES_DB:-${GLOBAL_DB_NAME:-devdb}}
       PGDATA: /var/lib/postgresql/data/pgdata
@@ -122,7 +126,7 @@ services:
     container_name: redis-stack
     profiles: ["db"]
     environment:
-      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}} --loglevel warning"
+      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:-${GLOBAL_PASSWORD}} --loglevel warning"
     ports:
       - "6379:6379"
       - "8001:8001"
@@ -142,7 +146,7 @@ services:
     profiles: ["db"]
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-${GLOBAL_USER:-devuser}}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD}}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-${GLOBAL_DB_NAME:-devdb}}
     ports:
       - "27017:27017"
@@ -153,7 +157,7 @@ services:
       - devnet
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "-u", "${MONGO_INITDB_ROOT_USERNAME:-${GLOBAL_USER:-devuser}}", "-p", "${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD}}", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -170,7 +174,7 @@ services:
       PMA_HOST: mysql
       PMA_PORT: 3306
       PMA_USER: ${PMA_USER:-root}
-      PMA_PASSWORD: ${PMA_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      PMA_PASSWORD: ${PMA_PASSWORD:-${GLOBAL_PASSWORD}}
       UPLOAD_LIMIT: 256M
       MEMORY_LIMIT: 512M
       MAX_EXECUTION_TIME: 300
@@ -191,7 +195,7 @@ services:
     profiles: ["db_tools"]
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-dev@${DOMAIN_SUFFIX:-local}.dev}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-${GLOBAL_PASSWORD}}
       PGADMIN_CONFIG_SERVER_MODE: "False"
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
     volumes:
@@ -213,11 +217,16 @@ services:
     profiles: ["db_tools"]
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME:-${GLOBAL_USER:-devuser}}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
-      ME_CONFIG_MONGODB_URL: "mongodb://${MONGO_INITDB_ROOT_USERNAME:-${GLOBAL_USER:-devuser}}:${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}@mongo:27017/"
-      ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME:-admin}
-      ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD}}
+      ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME:-${GLOBAL_USER:-admin}}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD:-${GLOBAL_PASSWORD}}
       ME_CONFIG_OPTIONS_EDITORTHEME: "dracula"
+    command: >
+      sh -c '
+      ENC_PASS=$$(node -e "console.log(encodeURIComponent(process.env.ME_CONFIG_MONGODB_ADMINPASSWORD))");
+      export ME_CONFIG_MONGODB_URL="mongodb://$${ME_CONFIG_MONGODB_ADMINUSERNAME}:$${ENC_PASS}@mongo:27017/?authSource=admin";
+      exec /docker-entrypoint.sh mongo-express
+      '
     networks:
       - devnet
     depends_on:
@@ -272,7 +281,7 @@ services:
     profiles: ["messaging"]
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-${GLOBAL_USER:-devuser}}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-${GLOBAL_PASSWORD}}
       RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-devhost}
     ports:
       - "5672:5672"
@@ -293,7 +302,7 @@ services:
     environment:
       SOKETI_DEFAULT_APP_ID: ${SOKETI_DEFAULT_APP_ID:-devapp}
       SOKETI_DEFAULT_APP_KEY: ${SOKETI_DEFAULT_APP_KEY:-devkey}
-      SOKETI_DEFAULT_APP_SECRET: ${SOKETI_DEFAULT_APP_SECRET:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      SOKETI_DEFAULT_APP_SECRET: ${SOKETI_DEFAULT_APP_SECRET:-${GLOBAL_PASSWORD}}
       SOKETI_DEBUG: "0"
     ports:
       - "6001:6001"
@@ -315,7 +324,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-${GLOBAL_USER:-devuser}}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-${GLOBAL_PASSWORD}}
     ports:
       - "9000:9000"
     volumes:
@@ -359,9 +368,10 @@ services:
     container_name: n8n
     profiles: ["automation"]
     environment:
+      N8N_SECURE_COOKIE: "false"
       N8N_BASIC_AUTH_ACTIVE: "true"
       N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
-      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-${GLOBAL_PASSWORD}}
       N8N_HOST: n8n.${DOMAIN_SUFFIX:-local}
       N8N_PROTOCOL: http
       WEBHOOK_URL: http://n8n.${DOMAIN_SUFFIX:-local}/
@@ -371,7 +381,7 @@ services:
       DB_POSTGRESDB_PORT: 5432
       DB_POSTGRESDB_DATABASE: n8n
       DB_POSTGRESDB_USER: ${N8N_DB_POSTGRESDB_USER:-${GLOBAL_USER:-devuser}}
-      DB_POSTGRESDB_PASSWORD: ${N8N_DB_POSTGRESDB_PASSWORD:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_POSTGRESDB_PASSWORD:-${GLOBAL_PASSWORD}}
     volumes:
       - n8n_data:/home/node/.n8n
     networks:
@@ -394,7 +404,7 @@ services:
     profiles: ["data"]
     environment:
       JUPYTER_ENABLE_LAB: "yes"
-      JUPYTER_TOKEN: ${JUPYTER_TOKEN:-${GLOBAL_PASSWORD:-D3vP@ss2025!}}
+      JUPYTER_TOKEN: ${JUPYTER_TOKEN:-${GLOBAL_PASSWORD}}
       GRANT_SUDO: "yes"
     volumes:
       - jupyter_data:/home/jovyan/work
@@ -405,4 +415,129 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.jupyter.rule=Host(`jupyter.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.jupyter.loadbalancer.server.port=8888"
+    restart: unless-stopped
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  API TOOLS (Profil: api_tools)                                           ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+  hoppscotch:
+    image: hoppscotch/hoppscotch:latest
+    container_name: hoppscotch
+    profiles: ["api_tools"]
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-${GLOBAL_USER:-devuser}}:${POSTGRES_PASSWORD:-${GLOBAL_PASSWORD}}@postgres:5432/hoppscotch"
+      DATA_ENCRYPTION_KEY: "01234567890123456789012345678901"
+      ENABLE_SUBPATH_BASED_ACCESS: "true"
+      VITE_BASE_URL: "http://api-tester.${DOMAIN_SUFFIX:-local}"
+      VITE_SHORTCODE_BASE_URL: "http://api-tester.${DOMAIN_SUFFIX:-local}"
+      VITE_ADMIN_URL: "http://api-tester.${DOMAIN_SUFFIX:-local}/admin"
+      VITE_BACKEND_GQL_URL: "http://api-tester.${DOMAIN_SUFFIX:-local}/backend/graphql"
+      VITE_BACKEND_WS_URL: "ws://api-tester.${DOMAIN_SUFFIX:-local}/backend/graphql"
+      VITE_BACKEND_API_URL: "http://api-tester.${DOMAIN_SUFFIX:-local}/backend/v1"
+      WHITELISTED_ORIGINS: "http://localhost:3000,http://api-tester.${DOMAIN_SUFFIX:-local}"
+      JWT_SECRET: "devstack-secret-key-change-me-in-production"
+      SESSION_SECRET: "devstack-secret-key-change-me-in-production"
+      TOKEN_SALT_COMPLEXITY: "10"
+      MAGIC_LINK_TOKEN_VALIDITY: "3"
+      REFRESH_TOKEN_VALIDITY: "604800000"
+      ACCESS_TOKEN_VALIDITY: "86400000"
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hoppscotch.rule=Host(`api-tester.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.hoppscotch.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  swagger-editor:
+    image: swaggerapi/swagger-editor:latest
+    container_name: swagger-editor
+    profiles: ["api_tools"]
+    environment:
+      SWAGGER_FILE: /openapi/openapi.json
+    volumes:
+      - ./openapi:/openapi
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.swagger-editor.rule=Host(`swagger.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.swagger-editor.loadbalancer.server.port=8080"
+    restart: unless-stopped
+
+  prism-mock:
+    image: stoplight/prism:5
+    container_name: prism-mock
+    profiles: ["api_tools"]
+    command: mock -h 0.0.0.0 -m false /openapi/openapi.json
+    volumes:
+      - ./openapi:/openapi
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prism-mock.rule=Host(`mock-api.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.prism-mock.loadbalancer.server.port=4010"
+    restart: unless-stopped
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  RECHERCHE (Profil: search)                                              ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    container_name: meilisearch
+    profiles: ["search"]
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-${GLOBAL_PASSWORD}}
+    volumes:
+      - meilisearch_data:/meili_data
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.meilisearch.rule=Host(`search.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.meilisearch.loadbalancer.server.port=7700"
+    restart: unless-stopped
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  OBSERVABILITÉ (Profil: observability)                                   ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    profiles: ["observability"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dozzle.rule=Host(`logs.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.dozzle.loadbalancer.server.port=8080"
+    restart: unless-stopped
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  QUALITÉ DE CODE (Profil: code_quality)                                  ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    profiles: ["code_quality"]
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonar
+      SONAR_JDBC_USERNAME: ${POSTGRES_USER:-${GLOBAL_USER:-devuser}}
+      SONAR_JDBC_PASSWORD: ${POSTGRES_PASSWORD:-${GLOBAL_PASSWORD}}
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - devnet
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarqube.rule=Host(`sonar.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.sonarqube.loadbalancer.server.port=9000"
     restart: unless-stopped

@@ -34,6 +34,12 @@ DOMAINS=(
   "portainer.local"
   "n8n.local"
   "jupyter.local"
+  "api-tester.local"
+  "swagger.local"
+  "mock-api.local"
+  "search.local"
+  "logs.local"
+  "sonar.local"
 )
 
 if [ "$EUID" -ne 0 ]; then

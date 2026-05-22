@@ -14,3 +14,7 @@ init/mongo/*
 # Notebooks
 notebooks/*
 !notebooks/.gitkeep
+
+# OpenAPI Mock data
+openapi/*
+!openapi/.gitkeep
