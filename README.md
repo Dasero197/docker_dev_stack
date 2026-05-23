@@ -31,6 +31,9 @@ Ensuite, un simple `docker compose up -d` lancera automatiquement vos outils fav
 # Exemple : Lancer les bases de données et les outils d'admin
 docker compose --profile db --profile db_tools up -d
 
+# Exemple : Gestion visuelle des conteneurs Docker
+docker compose --profile devtools up -d
+
 # Exemple : Ajouter la qualité de code temporairement
 docker compose --profile code_quality up -d
 ```
@@ -49,6 +52,7 @@ Voici la liste de tous les services embarqués, pourquoi ils sont là, et dans q
 - **MySQL / PostgreSQL / MongoDB**
   - **Pourquoi ?** Les 3 bases de données relationnelles et NoSQL les plus utilisées sur le marché. Disponibles localement sur leurs ports par défaut (3306, 5432, 27017).
   - **Cas d'usage :** Héberger les données de vos applications backend Python, Node.js ou PHP.
+  - 💡 **Initialisation (`internal/postgres`) :** Ce dossier contient les scripts SQL d'initialisation exécutés au premier démarrage de PostgreSQL. On peut y placer ses propres fichiers `.sql` pour créer des tables ou des rôles automatiquement.
 - **Redis** (`http://redis.local` pour RedisInsight)
   - **Pourquoi ?** Base de données en mémoire ultra-rapide.
   - **Cas d'usage :** Gestion du cache, files d'attente (Queues), gestion des sessions pour des API rapides.

@@ -98,7 +98,7 @@ services:
       retries: 5
 
   postgres:
-    image: dasero197/postgres-semver:17.9
+    image: ${POSTGRES_IMAGE:-postgres:17}
     container_name: postgres-server
     profiles: ["db"]
     environment:
@@ -164,8 +164,10 @@ services:
 # ║  ADMINISTRATION DES BDD (Profil: db_tools)                               ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
+  # ⚠ DÉPENDANCE : nécessite le profil 'db' actif (postgres/mysql)
+  # Lancer avec : docker compose --profile db --profile db_tools up -d
   phpmyadmin:
-    image: phpmyadmin:latest
+    image: phpmyadmin:5.2
     container_name: phpmyadmin
     profiles: ["db_tools"]
     environment:
@@ -187,6 +189,8 @@ services:
       - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
     restart: unless-stopped
 
+  # ⚠ DÉPENDANCE : nécessite le profil 'db' actif (postgres/mysql)
+  # Lancer avec : docker compose --profile db --profile db_tools up -d
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: pgadmin
@@ -210,7 +214,7 @@ services:
     restart: unless-stopped
 
   mongo-express:
-    image: mongo-express:latest
+    image: mongo-express:1.0.2
     container_name: mongo-express
     profiles: ["db_tools"]
     environment:
@@ -237,7 +241,7 @@ services:
     restart: unless-stopped
 
   adminer:
-    image: adminer:latest
+    image: adminer:4.8.1
     container_name: adminer
     profiles: ["db_tools"]
     environment:
@@ -256,7 +260,7 @@ services:
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.22
     container_name: mailpit
     profiles: ["messaging"]
     ports:
@@ -274,7 +278,7 @@ services:
     restart: unless-stopped
 
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:4.1-management-alpine
     container_name: rabbitmq
     profiles: ["messaging"]
     environment:
@@ -344,7 +348,7 @@ services:
 # ║  GESTION DOCKER (Profil: devtools)                                       ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
   portainer:
-    image: portainer/portainer-ce:latest
+    image: portainer/portainer-ce:2.27.3
     container_name: portainer
     profiles: ["devtools"]
     volumes:
@@ -361,8 +365,10 @@ services:
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║  AUTOMATION (Profil: automation)                                         ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
+  # ⚠ DÉPENDANCE : nécessite le profil 'db' actif (postgres/mysql)
+  # Lancer avec : docker compose --profile db --profile automation up -d
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:1.91.3
     container_name: n8n
     profiles: ["automation"]
     environment:
@@ -373,7 +379,7 @@ services:
       N8N_HOST: n8n.${DOMAIN_SUFFIX:-local}
       N8N_PROTOCOL: http
       WEBHOOK_URL: http://n8n.${DOMAIN_SUFFIX:-local}/
-      GENERIC_TIMEZONE: Africa/Porto-Novo
+      GENERIC_TIMEZONE: ${TIMEZONE:-Africa/Porto-Novo}
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgres
       DB_POSTGRESDB_PORT: 5432
@@ -418,13 +424,15 @@ services:
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║  API TOOLS (Profil: api_tools)                                           ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
+  # ⚠ DÉPENDANCE : nécessite le profil 'db' actif (postgres/mysql)
+  # Lancer avec : docker compose --profile db --profile api_tools up -d
   hoppscotch:
-    image: hoppscotch/hoppscotch:latest
+    image: hoppscotch/hoppscotch:2024.11.0
     container_name: hoppscotch
     profiles: ["api_tools"]
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER:-${GLOBAL_USER:-devuser}}:${POSTGRES_PASSWORD:-${GLOBAL_PASSWORD}}@postgres:5432/hoppscotch"
-      DATA_ENCRYPTION_KEY: "01234567890123456789012345678901"
+      DATA_ENCRYPTION_KEY: ${HOPPSCOTCH_ENCRYPTION_KEY}
       ENABLE_SUBPATH_BASED_ACCESS: "true"
       VITE_BASE_URL: "http://api-tester.${DOMAIN_SUFFIX:-local}"
       VITE_SHORTCODE_BASE_URL: "http://api-tester.${DOMAIN_SUFFIX:-local}"
@@ -433,8 +441,8 @@ services:
       VITE_BACKEND_WS_URL: "ws://api-tester.${DOMAIN_SUFFIX:-local}/backend/graphql"
       VITE_BACKEND_API_URL: "http://api-tester.${DOMAIN_SUFFIX:-local}/backend/v1"
       WHITELISTED_ORIGINS: "http://localhost:3000,http://api-tester.${DOMAIN_SUFFIX:-local}"
-      JWT_SECRET: "devstack-secret-key-change-me-in-production"
-      SESSION_SECRET: "devstack-secret-key-change-me-in-production"
+      JWT_SECRET: ${HOPPSCOTCH_JWT_SECRET}
+      SESSION_SECRET: ${HOPPSCOTCH_SESSION_SECRET}
       TOKEN_SALT_COMPLEXITY: "10"
       MAGIC_LINK_TOKEN_VALIDITY: "3"
       REFRESH_TOKEN_VALIDITY: "604800000"
@@ -448,7 +456,7 @@ services:
     restart: unless-stopped
 
   swagger-editor:
-    image: swaggerapi/swagger-editor:latest
+    image: swaggerapi/swagger-editor:v4.14.0
     container_name: swagger-editor
     profiles: ["api_tools"]
     environment:
@@ -501,7 +509,7 @@ services:
 # ║  OBSERVABILITÉ (Profil: observability)                                   ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
   dozzle:
-    image: amir20/dozzle:latest
+    image: amir20/dozzle:v8.12.15
     container_name: dozzle
     profiles: ["observability"]
     volumes:
@@ -517,6 +525,8 @@ services:
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║  QUALITÉ DE CODE (Profil: code_quality)                                  ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
+  # ⚠ DÉPENDANCE : nécessite le profil 'db' actif (postgres/mysql)
+  # Lancer avec : docker compose --profile db --profile code_quality up -d
   sonarqube:
     image: sonarqube:community
     container_name: sonarqube
