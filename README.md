@@ -1,5 +1,15 @@
 # 🐳 Dev Stack — L'Environnement de Développement Ultime
 
+<div align="center">
+
+![GitHub Repo stars](https://img.shields.io/github/stars/Dasero197/docker_dev_stack?style=for-the-badge&color=ffd700&logo=github)
+![GitHub forks](https://img.shields.io/github/forks/Dasero197/docker_dev_stack?style=for-the-badge&color=orange&logo=github)
+![GitHub issues](https://img.shields.io/github/issues/Dasero197/docker_dev_stack?style=for-the-badge&color=red&logo=github)
+![GitHub last commit](https://img.shields.io/github/last-commit/Dasero197/docker_dev_stack?style=for-the-badge&color=success&logo=github)
+![Visiteurs](https://komarev.com/ghpvc/?username=Dasero197-docker-dev-stack&label=VISITEURS&color=blue&style=for-the-badge)
+
+</div>
+
 Bienvenue sur **Dev Stack** ! Ce dépôt met à disposition un environnement Docker local complet, modulaire et "plug-and-play" pour les développeurs, conçu pour centraliser tous les outils dont vous avez besoin sans polluer votre machine hôte.
 
 Que vous fassiez du **Python**, du **Node.js**, du **Dart/Flutter** ou de la **Data Science**, cette stack s'adapte à vos besoins grâce à un système de **profils**. Vous ne lancez que ce dont vous avez besoin !
@@ -15,6 +25,9 @@ sudo bash setup-hosts.sh
 ```
 
 > **Important :** Éditez le fichier `.env` nouvellement créé pour configurer vos mots de passe (`GLOBAL_PASSWORD`, `GLOBAL_USER`, etc.). Les variables commentées héritent automatiquement des valeurs par défaut.
+
+> 💡 **Astuce (Mots de passe avec caractères spéciaux) :** Évitez absolument d'utiliser les caractères `@`, `%`, `:`, et `/` dans vos mots de passe (`GLOBAL_PASSWORD`). 
+> Certains outils (comme Python Alembic utilisé par Flowsint) plantent s'ils voient un `%` dans l'URL de la base de données, rendant l'encodage URL impossible. Privilégiez des mots de passe longs avec des lettres, chiffres, et des caractères sûrs comme `-`, `_`, `!`.
 
 ### 2. Lancer la Stack (Modularité)
 La stack utilise des **profils Docker Compose** pour économiser la RAM et le CPU de votre machine. 
@@ -112,6 +125,25 @@ Voici la liste de tous les services embarqués, pourquoi ils sont là, et dans q
 - **JupyterLab** (`http://jupyter.local`)
   - **Pourquoi ?** L'environnement de référence pour l'analyse de données.
   - **Cas d'usage :** Explorer des jeux de données, faire de la manipulation Pandas, entrainer des modèles de Machine Learning, en conservant tous vos notebooks dans le dossier `./notebooks`.
+
+### 🔄 Synchronisation P2P & Vaults (`profile: sync`)
+- **Syncthing** (`http://syncthing.local`)
+  - **Pourquoi ?** Une alternative open-source à Dropbox/Google Drive, qui synchronise vos fichiers en pair-à-pair (P2P) de manière chiffrée, sans passer par un cloud public.
+  - **Cas d'usage (Standalone) :** Partager des fichiers de configuration, vos notes (Obsidian), ou synchroniser vos backups de base de données entre plusieurs de vos appareils.
+  - **Cas d'usage "Vault Manager" :** En associant Syncthing à **KeePassXC**, vous obtenez un gestionnaire de mots de passe souverain et décentralisé. Parfait pour compartimenter les mots de passe de vos différents clients. 
+  - 💡 **Astuce (Plusieurs dossiers) :** Syncthing mappe un dossier racine défini par `SYNCTHING_SYNC_DIR` dans le fichier `.env`. Pour synchroniser plusieurs projets, placez-les simplement dans ce dossier racine. Si vous devez cibler des dossiers éparpillés, créez un fichier `docker-compose.override.yml` pour y ajouter des volumes manuellement.
+  - 📖 **Documentation dédiée :** [Lire le guide complet du Coffre-Fort Décentralisé](./docs/decentralized-vault.md) et utilisez `bash scripts/setup-vault-manager.sh` pour l'installation rapide.
+
+### 🕵️‍♂️ OSINT & Cybersécurité (`profile: osint`)
+- **Flowsint** (`http://flowsint.local`)
+  - **Pourquoi ?** Plateforme open-source d'investigation graphique (OSINT). Elle permet de cartographier visuellement des entités (nom de domaine, IP, e-mail, réseaux sociaux) et de découvrir les liens cachés via des scripts automatisés (enrichers).
+  - **Cas d'usage (Ops / Sécurité) :** 
+    - *Cartographie :* Lancer des scripts sur votre domaine pour découvrir le Shadow IT, les sous-domaines, et vérifier la sécurité.
+    - *Investigation :* Analyser les IP/e-mails suspects en cas de brute-force, ou vérifier les fuites de données de vos utilisateurs.
+  - **Cas d'usage (Dev Fullstack - Modèle d'Architecture) :**
+    - Étudier une architecture moderne et scalable : Frontend SPA (graphes), Backend FastAPI, bases de données hybrides (PostgreSQL + **Neo4j** pour les graphes), et tâches asynchrones via Celery.
+    - Un système de plugins propre pour les "enrichers".
+  - > ⚠️ **ATTENTION (Ressources) :** Ce profil lance **Neo4j** (très gourmand en RAM) ainsi qu'un worker Celery et une API. Assurez-vous d'avoir au moins 2-3 Go de RAM disponibles avant d'activer ce profil. Ne l'activez que lorsque vous en avez besoin.
 
 ---
 
