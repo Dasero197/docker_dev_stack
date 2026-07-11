@@ -3,13 +3,14 @@
 #  Reverse proxy : Traefik  →  accès par domaine *.local
 #
 #  Profils disponibles :
-#    - db        : MySQL, PostgreSQL, MongoDB, Redis
-#    - db_tools  : phpMyAdmin, pgAdmin, Mongo Express, Adminer
-#    - devtools  : Portainer (Traefik démarre toujours par défaut)
-#    - messaging : Mailpit, RabbitMQ, Soketi
-#    - storage   : MinIO
-#    - automation: n8n
-#    - data      : JupyterLab
+#    - db          : MySQL, PostgreSQL, MongoDB, Redis
+#    - db_tools    : phpMyAdmin, pgAdmin, Mongo Express, Adminer
+#    - devtools    : Portainer, JSONJoy Builder (Traefik démarre toujours par défaut)
+#    - messaging   : Mailpit, RabbitMQ, Soketi
+#    - storage     : MinIO
+#    - automation  : n8n
+#    - data        : JupyterLab
+#    - api_tools   : Hoppscotch, Swagger Editor, Prism Mock, JSONJoy Builder
 #
 #  Démarrez toute la stack : docker compose up -d
 #  Ou par profil : docker compose --profile db --profile db_tools up -d
@@ -712,4 +713,22 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.syncthing.rule=Host(`syncthing.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.syncthing.loadbalancer.server.port=8384"
+    restart: unless-stopped
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  JSON SCHEMAS (Profil: devtools, api_tools)                              ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+  jsonjoy-builder:
+    build:
+      context: ./internal/dockerfile
+      dockerfile: jsonjoybuilder.dockerfile
+    container_name: jsonjoy-builder
+    profiles: ["devtools", "api_tools"]
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jsonjoy-builder.rule=Host(`json-builder.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.jsonjoy-builder.loadbalancer.server.port=80"
     restart: unless-stopped

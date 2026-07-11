@@ -61,6 +61,14 @@ Voici la liste de tous les services embarqués, pourquoi ils sont là, et dans q
 - **Traefik** (`http://traefik.local`)
   - **Pourquoi ?** Il intercepte le trafic et le redirige vers vos conteneurs. Fini les conflits de ports (ex: `localhost:8080`, `localhost:8081`). Grâce à Traefik, chaque service obtient une belle URL personnalisée en `.local`.
 
+### 🛠️ Outils de Développement (`profile: devtools`)
+- **Portainer** (`http://portainer.local`)
+  - **Pourquoi ?** Interface graphique web pour gérer vos conteneurs Docker (démarrer, arrêter, consulter les logs, inspecter les images) sans jamais taper une commande.
+  - **Cas d'usage :** Surveiller l'état de votre stack en un coup d'œil, gérer les volumes et les images.
+- **JSONJoy Builder** (`http://json-builder.local`) *(aussi disponible avec `api_tools`)*
+  - **Pourquoi ?** Interface visuelle pour créer, éditer et valider des schémas JSON Schema. Construite localement à partir des sources (image custom), sans aucune dépendance externe.
+  - **Cas d'usage :** Concevoir et documenter la structure de vos données JSON, valider des documents JSON contre un schéma, ou générer des schémas à partir d'exemples.
+
 ### 🗄️ Bases de Données (`profile: db`)
 - **MySQL / PostgreSQL / MongoDB**
   - **Pourquoi ?** Les 3 bases de données relationnelles et NoSQL les plus utilisées sur le marché. Disponibles localement sur leurs ports par défaut (3306, 5432, 27017).
@@ -84,6 +92,9 @@ Voici la liste de tous les services embarqués, pourquoi ils sont là, et dans q
 - **Prism Mock API** (`http://mock-api.local`)
   - **Pourquoi ?** Créer un faux serveur backend (Mock) en une fraction de seconde basé sur votre spécification OpenAPI.
   - **Cas d'usage :** Les développeurs Front-end/Mobiles (ex: Flutter) n'ont pas besoin d'attendre que l'équipe Back-end ait terminé l'API. Prism répondra avec de fausses données (mocks) en respectant parfaitement le format attendu.
+- **JSONJoy Builder** (`http://json-builder.local`) *(aussi disponible avec `devtools`)*
+  - **Pourquoi ?** Interface visuelle pour créer, éditer et valider des schémas JSON Schema. Construite localement à partir des sources (image custom), sans aucune dépendance externe.
+  - **Cas d'usage :** Concevoir et documenter la structure de vos données JSON (ex: payload d'API, fichiers de config), valider des documents JSON contre un schéma, ou générer des schémas à partir d'exemples.
 
 ### 🔍 Recherche (`profile: search`)
 - **Meilisearch** (`http://search.local`)
