@@ -1,0 +1,36 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  DOCKER OPS & MONITORING (Profils: ops, devtools, observability)
+#
+#  Démarrer : docker compose --profile ops up -d
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+
+  portainer:
+    image: portainer/portainer-ce@sha256:8d2f5c9fbc5b8490fb3a12efadbad74978e22991911e1db611d8a45871775112
+    container_name: portainer
+    profiles: ["ops", "devtools"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    restart: unless-stopped
+
+  dozzle:
+    image: amir20/dozzle@sha256:345aa7fc8724d4086e93d1cafdb91d1e19ae6d6a7b1d652814dc30b3b03cbc82
+    container_name: dozzle
+    profiles: ["ops", "observability"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dozzle.rule=Host(`logs.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.dozzle.loadbalancer.server.port=8080"
+    restart: unless-stopped

@@ -1,0 +1,43 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  IA GATEWAY — OmniRoute (Profils: ai, devtools)
+#  Alimente CLI/éditeurs (Claude Code, Codex, Cursor, Copilot...)
+#  via un seul endpoint. Redis requis pour le rate-limiter.
+#
+#  Démarrer : docker compose --profile db --profile ai up -d
+# ═══════════════════════════════════════════════════════════════════════════
+
+include:
+  - ./db.yml
+
+services:
+
+  omniroute:
+    image: diegosouzapw/omniroute:latest
+    container_name: omniroute
+    profiles: ["ai", "devtools"]
+    env_file:
+      - ../../.env
+    environment:
+      - DATA_DIR=/app/data
+      - PORT=20128
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-${GLOBAL_PASSWORD}}@redis:6379/0
+      - JWT_SECRET=${OMNIROUTE_JWT_SECRET}
+      - API_KEY_SECRET=${OMNIROUTE_API_KEY_SECRET}
+      - STORAGE_ENCRYPTION_KEY=${OMNIROUTE_STORAGE_ENCRYPTION_KEY}
+      - INITIAL_PASSWORD=${OMNIROUTE_INITIAL_PASSWORD:-${GLOBAL_PASSWORD}}
+      - NEXT_PUBLIC_BASE_URL=http://omniroute.${DOMAIN_SUFFIX:-local}
+      - BASE_URL=http://omniroute.${DOMAIN_SUFFIX:-local}
+      - AUTH_COOKIE_SECURE=false
+      - NODE_ENV=production
+    volumes:
+      - omniroute_data:/app/data
+    networks:
+      - devnet
+    depends_on:
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.omniroute.rule=Host(`omniroute.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.omniroute.loadbalancer.server.port=20128"
+    restart: unless-stopped

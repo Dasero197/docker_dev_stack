@@ -1,0 +1,103 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  BASES DE DONNÉES (Profils: db, db_postgres, db_mysql, db_redis, db_mongo)
+#
+#  Démarrer toutes les DBs : docker compose --profile db up -d
+#  Démarrer par SGBD       : docker compose --profile db_postgres up -d
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-server
+    profiles: ["db", "db_mysql", "mysql"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-${GLOBAL_PASSWORD}}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-${GLOBAL_DB_NAME:-devdb}}
+      MYSQL_USER: ${MYSQL_USER:-${GLOBAL_USER:-devuser}}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-${GLOBAL_PASSWORD}}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    networks:
+      - devnet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:17}
+    container_name: postgres-server
+    profiles: ["db", "db_postgres", "postgres"]
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${GLOBAL_PASSWORD}}
+      POSTGRES_USER: ${POSTGRES_USER:-${GLOBAL_USER:-devuser}}
+      POSTGRES_DB: ${POSTGRES_DB:-${GLOBAL_DB_NAME:-devdb}}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../postgres:/docker-entrypoint-initdb.d:ro
+    networks:
+      - devnet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-${GLOBAL_USER:-devuser}} -d ${POSTGRES_DB:-${GLOBAL_DB_NAME:-devdb}}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis/redis-stack:7.4.0-v8
+    container_name: redis-stack
+    profiles: ["db", "db_redis", "redis"]
+    environment:
+      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:-${GLOBAL_PASSWORD}} --loglevel warning"
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    volumes:
+      - redis_data:/data
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redisinsight.rule=Host(`redis.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.redisinsight.loadbalancer.server.port=8001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-${GLOBAL_PASSWORD}}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  mongo:
+    image: mongo:7
+    container_name: mongo-server
+    profiles: ["db", "db_mongo", "mongo"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-${GLOBAL_USER:-devuser}}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD}}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-${GLOBAL_DB_NAME:-devdb}}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - devnet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "-u", "${MONGO_INITDB_ROOT_USERNAME:-${GLOBAL_USER:-devuser}}", "-p", "${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD}}", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

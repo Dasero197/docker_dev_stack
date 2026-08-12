@@ -1,0 +1,126 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  OSINT & CYBERSÉCURITÉ (Profil: osint)
+#  ⚠ DÉPENDANCES : nécessite le profil 'db' actif (postgres, redis)
+#  ⚠ Neo4j est très gourmand en mémoire.
+#  Démarrer : docker compose --profile db --profile osint up -d
+# ═══════════════════════════════════════════════════════════════════════════
+
+include:
+  - ./db.yml
+
+services:
+
+  neo4j:
+    image: neo4j:5
+    container_name: flowsint-neo4j
+    profiles: ["osint"]
+    restart: unless-stopped
+    environment:
+      - NEO4J_AUTH=${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_apoc_import_file_use__neo4j__config=true
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    networks:
+      - devnet
+    healthcheck:
+      test: cypher-shell -u ${NEO4J_USERNAME:-neo4j} -p ${NEO4J_PASSWORD} "RETURN 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  flowsint-api:
+    image: ghcr.io/reconurge/flowsint-api:${FLOWSINT_VERSION:-latest}
+    container_name: flowsint-api
+    profiles: ["osint"]
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-${GLOBAL_USER:-devuser}}:${POSTGRES_PASSWORD:-${GLOBAL_PASSWORD}}@postgres:5432/flowsint
+      - NEO4J_URI_BOLT=bolt://neo4j:7687
+      - NEO4J_USERNAME=${NEO4J_USERNAME:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - AUTH_SECRET=${FLOWSINT_AUTH_SECRET}
+      - MASTER_VAULT_KEY_V1=${FLOWSINT_MASTER_VAULT_KEY}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-${GLOBAL_PASSWORD}}@redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      devnet:
+        aliases:
+          - api
+
+  flowsint-celery:
+    image: ghcr.io/reconurge/flowsint-api:${FLOWSINT_VERSION:-latest}
+    container_name: flowsint-celery
+    profiles: ["osint"]
+    restart: unless-stopped
+    command:
+      [
+        "celery",
+        "-A",
+        "flowsint_core.core.celery",
+        "worker",
+        "--loglevel=info",
+        "--pool=threads",
+        "--concurrency=10",
+      ]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-${GLOBAL_USER:-devuser}}:${POSTGRES_PASSWORD:-${GLOBAL_PASSWORD}}@postgres:5432/flowsint
+      - NEO4J_URI_BOLT=bolt://neo4j:7687
+      - NEO4J_USERNAME=${NEO4J_USERNAME:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - MASTER_VAULT_KEY_V1=${FLOWSINT_MASTER_VAULT_KEY}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-${GLOBAL_PASSWORD}}@redis:6379/0
+      - SKIP_MIGRATIONS=true
+      - AUTH_SECRET=${FLOWSINT_AUTH_SECRET}
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A flowsint_core.core.celery inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      flowsint-api:
+        condition: service_healthy
+    networks:
+      - devnet
+
+  flowsint-app:
+    image: ghcr.io/reconurge/flowsint-app:${FLOWSINT_VERSION:-latest}
+    container_name: flowsint-app
+    profiles: ["osint"]
+    restart: unless-stopped
+    depends_on:
+      flowsint-api:
+        condition: service_healthy
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.flowsint.rule=Host(`flowsint.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.flowsint.loadbalancer.server.port=8080"

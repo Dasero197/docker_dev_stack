@@ -1,0 +1,33 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  QUALITÉ DE CODE (Profil: code_quality)
+#  ⚠ DÉPENDANCE : nécessite le profil 'db' actif (postgres)
+#  Démarrer : docker compose --profile db --profile code_quality up -d
+# ═══════════════════════════════════════════════════════════════════════════
+
+include:
+  - ./db.yml
+
+services:
+
+  sonarqube:
+    image: sonarqube@sha256:35bedac3f40cda75969890da59b17d577770844fe6ef659206c678a8e00921c7
+    container_name: sonarqube
+    profiles: ["code_quality"]
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonar
+      SONAR_JDBC_USERNAME: ${POSTGRES_USER:-${GLOBAL_USER:-devuser}}
+      SONAR_JDBC_PASSWORD: ${POSTGRES_PASSWORD:-${GLOBAL_PASSWORD}}
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - devnet
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarqube.rule=Host(`sonar.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.sonarqube.loadbalancer.server.port=9000"
+    restart: unless-stopped

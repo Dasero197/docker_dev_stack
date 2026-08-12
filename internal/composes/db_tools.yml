@@ -1,0 +1,98 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  ADMINISTRATION DES BDD (Profil: db_tools)
+#  ⚠ DÉPENDANCE : nécessite le profil 'db' actif (postgres/mysql/mongo)
+#  Démarrer : docker compose --profile db --profile db_tools up -d
+# ═══════════════════════════════════════════════════════════════════════════
+
+include:
+  - ./db.yml
+
+services:
+
+  phpmyadmin:
+    image: phpmyadmin@sha256:85a2b4eb2da6ca24d8966b211f83906bf9c3cc57f53f1d4f729b4b85395d389d
+    container_name: phpmyadmin
+    profiles: ["db_tools"]
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: ${PMA_USER:-root}
+      PMA_PASSWORD: ${PMA_PASSWORD:-${GLOBAL_PASSWORD}}
+      UPLOAD_LIMIT: 256M
+      MEMORY_LIMIT: 512M
+      MAX_EXECUTION_TIME: 300
+    networks:
+      - devnet
+    depends_on:
+      mysql:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4@sha256:cefc4cc6b7d9d71a9e81e76fb9d7e14038ab5661b539a190eea1b63fa612589a
+    container_name: pgadmin
+    profiles: ["db_tools"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-dev@${DOMAIN_SUFFIX:-local}.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-${GLOBAL_PASSWORD}}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - devnet
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ⚠ Image dépréciée
+  mongo-express:
+    image: mongo-express:1.0.2
+    container_name: mongo-express
+    profiles: ["db_tools"]
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME:-${GLOBAL_USER:-devuser}}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD}}
+      ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME:-${GLOBAL_USER:-admin}}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD:-${GLOBAL_PASSWORD}}
+      ME_CONFIG_OPTIONS_EDITORTHEME: "dracula"
+    command: >
+      sh -c '
+      ENC_PASS=$$(node -e "console.log(encodeURIComponent(process.env.ME_CONFIG_MONGODB_ADMINPASSWORD))");
+      export ME_CONFIG_MONGODB_URL="mongodb://$${ME_CONFIG_MONGODB_ADMINUSERNAME}:$${ENC_PASS}@mongo:27017/?authSource=admin";
+      exec /docker-entrypoint.sh mongo-express
+      '
+    networks:
+      - devnet
+    depends_on:
+      mongo:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mongo-express.rule=Host(`mongo.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"
+    restart: unless-stopped
+
+  adminer:
+    image: adminer@sha256:cc64d253db4f016cbcff2ff2f01e60ed07e74f38b4398f84d3c4fae4b5ce0e07
+    container_name: adminer
+    profiles: ["db_tools"]
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+      ADMINER_DESIGN: "dracula"
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adminer.rule=Host(`adminer.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.adminer.loadbalancer.server.port=8080"
+    restart: unless-stopped

@@ -61,18 +61,34 @@ Voici la liste de tous les services embarqués, pourquoi ils sont là, et dans q
 - **Traefik** (`http://traefik.local`)
   - **Pourquoi ?** Il intercepte le trafic et le redirige vers vos conteneurs. Fini les conflits de ports (ex: `localhost:8080`, `localhost:8081`). Grâce à Traefik, chaque service obtient une belle URL personnalisée en `.local`.
 
-### 🛠️ Outils de Développement (`profile: devtools`)
-- **Portainer** (`http://portainer.local`)
+### 🤖 Passerelle IA (`profile: ai`)
+- **OmniRoute** (`http://omniroute.local`)
+  - **Pourquoi ?** Passerelle IA (AI Gateway) et routeur d'API multi-modèles (LLM proxy/router).
+  - **Cas d'usage :** Centraliser la gestion de vos clés d'API IA et alimenter vos assistants CLI et éditeurs (Claude Code, Cursor, Copilot, Codex, etc.) via un point d'entrée unique et maîtrisé en local. *(Nécessite le profil `db` avec Redis).*
+
+### 🐳 Gestion & Surveillance Docker (`profile: ops` / `observability`)
+- **Portainer** (`http://portainer.local`) *(aussi disponible avec `devtools`)*
   - **Pourquoi ?** Interface graphique web pour gérer vos conteneurs Docker (démarrer, arrêter, consulter les logs, inspecter les images) sans jamais taper une commande.
   - **Cas d'usage :** Surveiller l'état de votre stack en un coup d'œil, gérer les volumes et les images.
-- **JSONJoy Builder** (`http://json-builder.local`) *(aussi disponible avec `api_tools`)*
-  - **Pourquoi ?** Interface visuelle pour créer, éditer et valider des schémas JSON Schema. Construite localement à partir des sources (image custom), sans aucune dépendance externe.
-  - **Cas d'usage :** Concevoir et documenter la structure de vos données JSON, valider des documents JSON contre un schéma, ou générer des schémas à partir d'exemples.
+- **Dozzle** (`http://logs.local`) *(aussi disponible avec `observability`)*
+  - **Pourquoi ?** Une interface web ultra-minimaliste et performante dédiée uniquement à la lecture des logs Docker en temps réel.
+  - **Cas d'usage :** Déboguer une application Node.js ou Python qui tourne dans un autre conteneur sans avoir à taper `docker logs -f ...` dans un terminal pour chaque service.
 
-### 🗄️ Bases de Données (`profile: db`)
+### 📑 Bureau, Documents & Schémas (`profile: office` / `diagram`)
+- **Stirling-PDF** (`http://pdf.local`)
+  - **Pourquoi ?** L'application ultime de traitement et manipulation de fichiers PDF en self-hosted.
+  - **Cas d'usage :** Fusionner, découper, compresser, signer, chiffrer, convertir ou appliquer de l'OCR sur vos documents PDF directement dans votre navigateur.
+- **Excalidraw** (`http://draw.local`) *(disponible avec `office`, `diagram` ou `devtools`)*
+  - **Pourquoi ?** Outil de schéma et tableau blanc virtuel collaboratif style "dessin à la main".
+  - **Cas d'usage :** Modéliser des architectures système, dessiner des diagrammes de flux et concevoir des maquettes d'interface utilisateur.
+- **Reactive Resume** (`http://resume.local`)
+  - **Pourquoi ?** Un générateur de CV (Resume Builder) open-source, moderne, hautement personnalisable et respectueux de la vie privée.
+  - **Cas d'usage :** Créer, éditer et exporter des CV professionnels élégants (format PDF), gérer plusieurs variantes de votre CV. *(Nécessite le profil `db` avec PostgreSQL et Redis).*
+
+### 🗄️ Bases de Données (`profile: db` ou sous-profils: `db_postgres`, `db_mysql`, `db_redis`, `db_mongo`)
 - **MySQL / PostgreSQL / MongoDB**
   - **Pourquoi ?** Les 3 bases de données relationnelles et NoSQL les plus utilisées sur le marché. Disponibles localement sur leurs ports par défaut (3306, 5432, 27017).
-  - **Cas d'usage :** Héberger les données de vos applications backend Python, Node.js ou PHP.
+  - **Cas d'usage :** Héberger les données de vos applications backend Python, Node.js ou PHP. Vous pouvez lancer toutes les bases avec `--profile db`, ou cibler uniquement celle dont vous avez besoin avec `--profile db_postgres` (ou `db_mysql`, `db_redis`, `db_mongo`).
   - 💡 **Initialisation (`internal/postgres`) :** Ce dossier contient les scripts SQL d'initialisation exécutés au premier démarrage de PostgreSQL. On peut y placer ses propres fichiers `.sql` pour créer des tables ou des rôles automatiquement.
 - **Redis** (`http://redis.local` pour RedisInsight)
   - **Pourquoi ?** Base de données en mémoire ultra-rapide.
@@ -82,7 +98,7 @@ Voici la liste de tous les services embarqués, pourquoi ils sont là, et dans q
 - **phpMyAdmin** (`http://phpmyadmin.local`) / **pgAdmin** (`http://pgadmin.local`) / **Mongo Express** (`http://mongo.local`) / **Adminer** (`http://adminer.local`)
   - **Pourquoi ?** Éviter d'avoir à installer des logiciels lourds comme DBeaver ou DataGrip sur votre machine. Ces interfaces web vous permettent de visualiser, modifier et exporter les données de vos bases de données d'un simple clic.
 
-### ⚡ Outils API (`profile: api_tools`)
+### ⚡ Outils API & Schémas (`profile: api_tools`)
 - **Hoppscotch** (`http://api-tester.local`)
   - **Pourquoi ?** L'alternative open-source et ultra-rapide à Postman, accessible directement depuis le navigateur.
   - **Cas d'usage :** Tester vos routes d'API, sauvegarder des collections de requêtes, et partager des espaces de travail.
@@ -94,17 +110,12 @@ Voici la liste de tous les services embarqués, pourquoi ils sont là, et dans q
   - **Cas d'usage :** Les développeurs Front-end/Mobiles (ex: Flutter) n'ont pas besoin d'attendre que l'équipe Back-end ait terminé l'API. Prism répondra avec de fausses données (mocks) en respectant parfaitement le format attendu.
 - **JSONJoy Builder** (`http://json-builder.local`) *(aussi disponible avec `devtools`)*
   - **Pourquoi ?** Interface visuelle pour créer, éditer et valider des schémas JSON Schema. Construite localement à partir des sources (image custom), sans aucune dépendance externe.
-  - **Cas d'usage :** Concevoir et documenter la structure de vos données JSON (ex: payload d'API, fichiers de config), valider des documents JSON contre un schéma, ou générer des schémas à partir d'exemples.
+  - **Cas d'usage :** Concevoir et documenter la structure de vos données JSON, valider des documents JSON contre un schéma, ou générer des schémas à partir d'exemples.
 
 ### 🔍 Recherche (`profile: search`)
 - **Meilisearch** (`http://search.local`)
   - **Pourquoi ?** Un moteur de recherche full-text open-source ultra performant, typeready et facile à utiliser (alternative à Algolia/ElasticSearch).
   - **Cas d'usage :** Implémenter une barre de recherche "instantanée" et tolérante aux fautes de frappe dans vos applications web/mobiles.
-
-### 📊 Observabilité et Logs (`profile: observability`)
-- **Dozzle** (`http://logs.local`)
-  - **Pourquoi ?** Une interface web ultra-minimaliste et performante dédiée uniquement à la lecture des logs Docker en temps réel.
-  - **Cas d'usage :** Déboguer une application Node.js ou Python qui tourne dans un autre conteneur sans avoir à taper `docker logs -f ...` dans un terminal pour chaque service.
 
 ### 🛡️ Qualité de Code (`profile: code_quality`)
 - **SonarQube** (`http://sonar.local`)
@@ -144,6 +155,14 @@ Voici la liste de tous les services embarqués, pourquoi ils sont là, et dans q
   - **Cas d'usage "Vault Manager" :** En associant Syncthing à **KeePassXC**, vous obtenez un gestionnaire de mots de passe souverain et décentralisé. Parfait pour compartimenter les mots de passe de vos différents clients. 
   - 💡 **Astuce (Plusieurs dossiers) :** Syncthing mappe un dossier racine défini par `SYNCTHING_SYNC_DIR` dans le fichier `.env`. Pour synchroniser plusieurs projets, placez-les simplement dans ce dossier racine. Si vous devez cibler des dossiers éparpillés, créez un fichier `docker-compose.override.yml` pour y ajouter des volumes manuellement.
   - 📖 **Documentation dédiée :** [Lire le guide complet du Coffre-Fort Décentralisé](./docs/decentralized-vault.md) et utilisez `bash scripts/setup-vault-manager.sh` pour l'installation rapide.
+
+### 📑 Bureau & Documents (`profile: office`)
+- **Stirling-PDF** (`http://pdf.local`)
+  - **Pourquoi ?** L'application ultime de traitement et manipulation de fichiers PDF en self-hosted.
+  - **Cas d'usage :** Fusionner, découper, compresser, signer, chiffrer, convertir ou appliquer de l'OCR sur vos documents PDF directement dans votre navigateur, de manière totalement privée et hors cloud.
+- **Reactive Resume** (`http://resume.local`)
+  - **Pourquoi ?** Un générateur de CV (Resume Builder) open-source, moderne, hautement personnalisable et respectueux de la vie privée.
+  - **Cas d'usage :** Créer, éditer et exporter des CV professionnels élégants (format PDF), gérer plusieurs variantes de votre CV et synchroniser vos données. *(Nécessite le profil `db` actif avec PostgreSQL).*
 
 ### 🕵️‍♂️ OSINT & Cybersécurité (`profile: osint`)
 - **Flowsint** (`http://flowsint.local`)
@@ -214,7 +233,4 @@ docker compose logs -f n8n
 
 ## 🔒 Confidentialité & Partage
 - Ce dépôt est conçu pour être partagé.
-- Le fichier `.gitignore` masque automatiquement le fichier `.env` (vos mots de passe) et les données internes des bases de données (`mysql_data`, etc.).
-- Ne commitez **jamais** votre fichier `.env` !
-
-*Bon dev !* 🚀
+- Le fichier `.gitignore` masque automatiquement le fichier `.env` contenant vos secrets ainsi que les données persistantes et volumes locaux.

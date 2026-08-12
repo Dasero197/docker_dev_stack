@@ -1,0 +1,72 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  OFFICE, DOCUMENTS & SCHÉMAS (Profils: office, diagram, devtools)
+#
+#  Démarrer (bureautique & schémas) : docker compose --profile office up -d
+#  Démarrer (schémas seuls)         : docker compose --profile diagram up -d
+#  ⚠ reactive-resume nécessite le profil 'db' (postgres, redis)
+# ═══════════════════════════════════════════════════════════════════════════
+
+include:
+  - ./db.yml
+
+services:
+
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf:latest
+    container_name: stirling-pdf
+    profiles: ["office"]
+    environment:
+      LANGS: ${STIRLING_PDF_LANGS:-fr-FR}
+      SECURITY_ENABLE_LOGIN: ${STIRLING_PDF_SECURITY_ENABLE_LOGIN:-false}
+      APP_HOME_NAME: ${STIRLING_PDF_APP_NAME:-Stirling PDF}
+      TZ: ${TIMEZONE:-Africa/Porto-Novo}
+    volumes:
+      - stirling_data:/configs
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.stirling-pdf.rule=Host(`pdf.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.stirling-pdf.loadbalancer.server.port=8080"
+    restart: unless-stopped
+
+  excalidraw:
+    image: excalidraw/excalidraw:latest
+    container_name: excalidraw
+    profiles: ["office", "diagram", "devtools"]
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.excalidraw.rule=Host(`draw.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.excalidraw.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ⚠ DÉPENDANCE : nécessite le profil 'db' actif (postgres, redis)
+  reactive-resume:
+    image: ghcr.io/amruthpillai/reactive-resume:latest
+    container_name: reactive-resume
+    profiles: ["office"]
+    environment:
+      PORT: "3000"
+      NODE_ENV: production
+      APP_URL: "http://resume.${DOMAIN_SUFFIX:-local}"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-${GLOBAL_USER:-devuser}}:${POSTGRES_PASSWORD:-${GLOBAL_PASSWORD}}@postgres:5432/reactiveresume"
+      AUTH_SECRET: ${REACTIVE_RESUME_AUTH_SECRET:-${GLOBAL_PASSWORD}}
+      TZ: ${TIMEZONE:-Africa/Porto-Novo}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-${GLOBAL_PASSWORD}}@redis:6379/0
+      ENCRYPTION_SECRET: ${REACTIVE_RESUME_AI_ENCRYPTION_SECRET:-${GLOBAL_PASSWORD}}
+    volumes:
+      - reactive_resume_data:/app/data
+    networks:
+      - devnet
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.reactive-resume.rule=Host(`resume.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.reactive-resume.loadbalancer.server.port=3000"
+    restart: unless-stopped

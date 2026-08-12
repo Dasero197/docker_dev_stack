@@ -106,7 +106,7 @@ else
   echo "👉 Tous les domaines seront ajoutés par défaut à votre fichier hosts."
   echo "💡 Conseil : Installez Python 3 et relancez ce script pour garder votre fichier hosts propre et léger !"
   echo ""
-  DOMAINS_RAW=$(grep -oE "Host\(\`[^\`]+\`\)" docker-compose.yml | cut -d"\`" -f2 | sort -u)
+  DOMAINS_RAW=$(grep -rhE "Host\(\`[^\`]+\`\)" docker-compose.yml internal/composes/*.yml 2>/dev/null | cut -d"\`" -f2 | sort -u)
   DOMAINS_STR=$(for d in $DOMAINS_RAW; do echo "ACTIVE:$d"; done)
 fi
 

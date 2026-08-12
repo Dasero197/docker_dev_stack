@@ -1,0 +1,31 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  SYNCHRONISATION & VAULTS (Profil: sync)
+#  Démarrer : docker compose --profile sync up -d
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+
+  syncthing:
+    image: lscr.io/linuxserver/syncthing:latest
+    container_name: syncthing
+    profiles: ["sync"]
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TIMEZONE:-Africa/Porto-Novo}
+    volumes:
+      - syncthing_config:/config
+      - ${SYNCTHING_SYNC_DIR:-~/Documents/Vaults_Clients}:/sync
+      - ../syncthing/custom-init.sh:/custom-cont-init.d/custom-init.sh:ro
+    ports:
+      - "8384:8384"
+      - "22000:22000/tcp"
+      - "22000:22000/udp"
+      - "21027:21027/udp" # Local discovery
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.syncthing.rule=Host(`syncthing.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.syncthing.loadbalancer.server.port=8384"
+    restart: unless-stopped
