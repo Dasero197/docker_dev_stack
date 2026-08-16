@@ -1,8 +1,7 @@
 # ═══════════════════════════════════════════════════════════════════════════
-#  OFFICE, DOCUMENTS & SCHÉMAS (Profils: office, diagram, devtools)
+#  OFFICE, DOCUMENTS & SCHÉMAS (Profils: office, devtools)
 #
 #  Démarrer (bureautique & schémas) : docker compose --profile office up -d
-#  Démarrer (schémas seuls)         : docker compose --profile diagram up -d
 #  ⚠ reactive-resume nécessite le profil 'db' (postgres, redis)
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -10,11 +9,10 @@ include:
   - ./db.yml
 
 services:
-
   stirling-pdf:
     image: stirlingtools/stirling-pdf:latest
     container_name: stirling-pdf
-    profiles: ["office"]
+    profiles: ["office", "stirling_pdf"]
     environment:
       LANGS: ${STIRLING_PDF_LANGS:-fr-FR}
       SECURITY_ENABLE_LOGIN: ${STIRLING_PDF_SECURITY_ENABLE_LOGIN:-false}
@@ -28,25 +26,35 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.stirling-pdf.rule=Host(`pdf.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.stirling-pdf.loadbalancer.server.port=8080"
+      - "homepage.group=Bureautique"
+      - "homepage.name=Stirling PDF"
+      - "homepage.icon=mdi-file-pdf"
+      - "homepage.href=http://pdf.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Génération PDF"
     restart: unless-stopped
 
   excalidraw:
     image: excalidraw/excalidraw:latest
     container_name: excalidraw
-    profiles: ["office", "diagram", "devtools"]
+    profiles: ["office", "devtools", "excalidraw"]
     networks:
       - devnet
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.excalidraw.rule=Host(`draw.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.excalidraw.loadbalancer.server.port=80"
+      - "homepage.group=Bureautique"
+      - "homepage.name=Excalidraw"
+      - "homepage.icon=mdi-draw"
+      - "homepage.href=http://draw.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Outil de dessin collaboratif"
     restart: unless-stopped
 
   # ⚠ DÉPENDANCE : nécessite le profil 'db' actif (postgres, redis)
   reactive-resume:
     image: ghcr.io/amruthpillai/reactive-resume:latest
     container_name: reactive-resume
-    profiles: ["office"]
+    profiles: ["office", "reactive_resume"]
     environment:
       PORT: "3000"
       NODE_ENV: production
@@ -69,4 +77,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.reactive-resume.rule=Host(`resume.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.reactive-resume.loadbalancer.server.port=3000"
+      - "homepage.group=Bureautique"
+      - "homepage.name=Reactive Resume"
+      - "homepage.icon=mdi-file-document"
+      - "homepage.href=http://resume.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=CV réactif & portfolio"
     restart: unless-stopped

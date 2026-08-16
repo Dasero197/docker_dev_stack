@@ -26,4 +26,13 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik-ui.rule=Host(`traefik.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.routers.traefik-ui.service=api@internal"
+      - "homepage.enable=true"
+      - "homepage.group=Observabilité"
+      - "homepage.name=Traefik"
+      - "homepage.icon=traefik.png"
+      - "homepage.href=http://traefik.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Reverse Proxy"
+      # Configuration du Widget Traefik :
+      - "homepage.widget.type=traefik"
+      - "homepage.widget.url=http://traefik:8080"
     restart: unless-stopped

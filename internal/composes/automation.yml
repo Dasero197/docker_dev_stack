@@ -8,11 +8,10 @@ include:
   - ./db.yml
 
 services:
-
   n8n:
     image: n8nio/n8n@sha256:9f1f8e4c093c9924338bd168e3f813f746041d13b337753af0dbdd329e7b50f7
     container_name: n8n
-    profiles: ["automation"]
+    profiles: ["automation", "n8n"]
     environment:
       N8N_SECURE_COOKIE: "false"
       N8N_BASIC_AUTH_ACTIVE: "true"
@@ -39,4 +38,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+      - "homepage.group=Automatisation"
+      - "homepage.name=n8n"
+      - "homepage.icon=n8n.png"
+      - "homepage.href=http://n8n.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Automatisation de workflows"
     restart: unless-stopped

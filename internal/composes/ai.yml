@@ -10,11 +10,10 @@ include:
   - ./db.yml
 
 services:
-
   omniroute:
     image: diegosouzapw/omniroute:latest
     container_name: omniroute
-    profiles: ["ai", "devtools"]
+    profiles: ["ai", "omniroute", "devtools"]
     env_file:
       - ../../.env
     environment:
@@ -40,4 +39,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.omniroute.rule=Host(`omniroute.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.omniroute.loadbalancer.server.port=20128"
+      - "homepage.group=IA & Outils"
+      - "homepage.name=OmniRoute"
+      - "homepage.icon=mdi-robot"
+      - "homepage.href=http://omniroute.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Passerelle IA / LLM Router"
     restart: unless-stopped

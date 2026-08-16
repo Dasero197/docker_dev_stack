@@ -8,11 +8,10 @@ include:
   - ./db.yml
 
 services:
-
   sonarqube:
     image: sonarqube@sha256:35bedac3f40cda75969890da59b17d577770844fe6ef659206c678a8e00921c7
     container_name: sonarqube
-    profiles: ["code_quality"]
+    profiles: ["code_quality", "sonarqube"]
     environment:
       SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonar
       SONAR_JDBC_USERNAME: ${POSTGRES_USER:-${GLOBAL_USER:-devuser}}
@@ -30,4 +29,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.sonarqube.rule=Host(`sonar.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.sonarqube.loadbalancer.server.port=9000"
+      - "homepage.group=Qualité de code"
+      - "homepage.name=SonarQube"
+      - "homepage.icon=sonarqube.png"
+      - "homepage.href=http://sonar.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Analyse statique de code"
     restart: unless-stopped

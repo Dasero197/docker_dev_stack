@@ -4,11 +4,10 @@
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
-
   jupyter:
     image: quay.io/jupyter/datascience-notebook:2026-05-11
     container_name: jupyter
-    profiles: ["data"]
+    profiles: ["data", "jupyter"]
     environment:
       JUPYTER_ENABLE_LAB: "yes"
       JUPYTER_TOKEN: ${JUPYTER_TOKEN:-${GLOBAL_PASSWORD}}
@@ -22,4 +21,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.jupyter.rule=Host(`jupyter.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.jupyter.loadbalancer.server.port=8888"
+      - "homepage.group=Data Science"
+      - "homepage.name=JupyterLab"
+      - "homepage.icon=jupyter.png"
+      - "homepage.href=http://jupyter.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Notebooks Python"
     restart: unless-stopped

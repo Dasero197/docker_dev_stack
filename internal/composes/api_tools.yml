@@ -9,10 +9,25 @@ include:
 
 services:
 
+  hoppscotch-migrate:
+    image: hoppscotch/hoppscotch@sha256:ac8eeda2e9a8347816412e707ae504a5cc02dc5ea83e974b00100516831cfb9a
+    container_name: hoppscotch-migrate
+    profiles: ["api_tools", "hoppscotch"]
+    entrypoint: ["sh", "-c"]
+    command: ["cd /dist/backend && pnpm exec prisma migrate deploy"]
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-${GLOBAL_USER:-devuser}}:${POSTGRES_PASSWORD:-${GLOBAL_PASSWORD}}@postgres:5432/hoppscotch"
+    networks:
+      - devnet
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   hoppscotch:
     image: hoppscotch/hoppscotch@sha256:ac8eeda2e9a8347816412e707ae504a5cc02dc5ea83e974b00100516831cfb9a
     container_name: hoppscotch
-    profiles: ["api_tools"]
+    profiles: ["api_tools", "hoppscotch"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -37,16 +52,23 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      hoppscotch-migrate:
+        condition: service_completed_successfully
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.hoppscotch.rule=Host(`api-tester.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.hoppscotch.loadbalancer.server.port=80"
+      - "homepage.group=Outils API"
+      - "homepage.name=Hoppscotch"
+      - "homepage.icon=hoppscotch.png"
+      - "homepage.href=http://api-tester.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Testeur d'API"
     restart: unless-stopped
 
   swagger-editor:
     image: swaggerapi/swagger-editor@sha256:d7c26246093f36fea0c851b6b61cf61cbddae4c536147336361ff3b1f6e86a82
     container_name: swagger-editor
-    profiles: ["api_tools"]
+    profiles: ["api_tools", "swagger_editor"]
     environment:
       SWAGGER_FILE: /openapi/openapi.json
     volumes:
@@ -57,12 +79,17 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.swagger-editor.rule=Host(`swagger.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.swagger-editor.loadbalancer.server.port=80"
+      - "homepage.group=Outils API"
+      - "homepage.name=Swagger Editor"
+      - "homepage.icon=swagger.png"
+      - "homepage.href=http://swagger.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Éditeur OpenAPI"
     restart: unless-stopped
 
   prism-mock:
     image: stoplight/prism:5
     container_name: prism-mock
-    profiles: ["api_tools"]
+    profiles: ["api_tools", "prism_mock"]
     command: mock -h 0.0.0.0 -m false /openapi/openapi.json
     volumes:
       - ../../openapi:/openapi
@@ -72,6 +99,11 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.prism-mock.rule=Host(`mock-api.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.prism-mock.loadbalancer.server.port=4010"
+      - "homepage.group=Outils API"
+      - "homepage.name=Prism Mock API"
+      - "homepage.icon=mdi-api"
+      - "homepage.href=http://mock-api.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Mock server OpenAPI"
     restart: unless-stopped
 
   jsonjoy-builder:
@@ -79,11 +111,16 @@ services:
       context: ../..
       dockerfile: internal/dockerfile/jsonjoybuilder.dockerfile
     container_name: jsonjoy-builder
-    profiles: ["api_tools", "devtools"]
+    profiles: ["api_tools", "devtools", "jsonjoy_builder"]
     networks:
       - devnet
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.jsonjoy-builder.rule=Host(`json-builder.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.jsonjoy-builder.loadbalancer.server.port=80"
+      - "homepage.group=Outils API"
+      - "homepage.name=JSONJoy Builder"
+      - "homepage.icon=mdi-file-code"
+      - "homepage.href=http://json-builder.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Générateur JSON & mock"
     restart: unless-stopped

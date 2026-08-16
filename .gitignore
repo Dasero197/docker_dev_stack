@@ -12,3 +12,13 @@ notebooks/*
 # OpenAPI Mock data
 openapi/*
 !openapi/.gitkeep
+internal/configs/homepage/bookmarks.yaml
+internal/configs/homepage/logs/homepage.log
+internal/configs/homepage/widgets.yaml
+internal/configs/homepage/settings.yaml
+internal/configs/homepage/services.yaml
+internal/configs/homepage/proxmox.yaml
+internal/configs/homepage/custom.js
+internal/configs/homepage/kubernetes.yaml
+internal/configs/homepage/custom.css
+internal/configs/homepage/logs/

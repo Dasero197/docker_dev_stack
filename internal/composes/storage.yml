@@ -4,11 +4,10 @@
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
-
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: minio
-    profiles: ["storage"]
+    profiles: ["storage", "minio"]
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-${GLOBAL_USER:-devuser}}
@@ -23,6 +22,11 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.minio.rule=Host(`minio.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.minio.loadbalancer.server.port=9001"
+      - "homepage.group=Stockage"
+      - "homepage.name=MinIO"
+      - "homepage.icon=minio.png"
+      - "homepage.href=http://minio.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Stockage compatible S3"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]

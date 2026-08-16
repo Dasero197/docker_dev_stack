@@ -1,15 +1,14 @@
 # ═══════════════════════════════════════════════════════════════════════════
-#  DOCKER OPS & MONITORING (Profils: ops, devtools, observability)
+#  DOCKER OPS & MONITORING (Profils: ops, devtools)
 #
 #  Démarrer : docker compose --profile ops up -d
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
-
   portainer:
     image: portainer/portainer-ce@sha256:8d2f5c9fbc5b8490fb3a12efadbad74978e22991911e1db611d8a45871775112
     container_name: portainer
-    profiles: ["ops", "devtools"]
+    profiles: ["ops", "devtools", "portainer"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
@@ -19,12 +18,17 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      - "homepage.group=Opérations & Observabilité"
+      - "homepage.name=Portainer"
+      - "homepage.icon=portainer.png"
+      - "homepage.href=http://portainer.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Gestion des conteneurs"
     restart: unless-stopped
 
   dozzle:
     image: amir20/dozzle@sha256:345aa7fc8724d4086e93d1cafdb91d1e19ae6d6a7b1d652814dc30b3b03cbc82
     container_name: dozzle
-    profiles: ["ops", "observability"]
+    profiles: ["ops", "dozzle"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -33,4 +37,30 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.dozzle.rule=Host(`logs.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.dozzle.loadbalancer.server.port=8080"
+      - "homepage.group=Opérations & Observabilité"
+      - "homepage.name=Dozzle"
+      - "homepage.icon=dozzle.png"
+      - "homepage.href=http://logs.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Logs Docker en temps réel"
+    restart: unless-stopped
+
+  glances:
+    image: nicolargo/glances:latest-full
+    container_name: glances
+    profiles: ["ops", "glances"]
+    pid: host
+    privileged: true
+    environment:
+      - GLANCES_OPT=-w
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - devnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.glances.rule=Host(`glances.${DOMAIN_SUFFIX:-local}`)"
+      - "traefik.http.services.glances.loadbalancer.server.port=61208"
     restart: unless-stopped

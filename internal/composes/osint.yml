@@ -9,11 +9,10 @@ include:
   - ./db.yml
 
 services:
-
   neo4j:
     image: neo4j:5
     container_name: flowsint-neo4j
-    profiles: ["osint"]
+    profiles: ["osint", "flowsint"]
     restart: unless-stopped
     environment:
       - NEO4J_AUTH=${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD}
@@ -37,7 +36,7 @@ services:
   flowsint-api:
     image: ghcr.io/reconurge/flowsint-api:${FLOWSINT_VERSION:-latest}
     container_name: flowsint-api
-    profiles: ["osint"]
+    profiles: ["osint", "flowsint"]
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -69,7 +68,7 @@ services:
   flowsint-celery:
     image: ghcr.io/reconurge/flowsint-api:${FLOWSINT_VERSION:-latest}
     container_name: flowsint-celery
-    profiles: ["osint"]
+    profiles: ["osint", "flowsint"]
     restart: unless-stopped
     command:
       [
@@ -93,7 +92,11 @@ services:
       - SKIP_MIGRATIONS=true
       - AUTH_SECRET=${FLOWSINT_AUTH_SECRET}
     healthcheck:
-      test: ["CMD-SHELL", "celery -A flowsint_core.core.celery inspect ping -d celery@$$HOSTNAME || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "celery -A flowsint_core.core.celery inspect ping -d celery@$$HOSTNAME || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -113,7 +116,7 @@ services:
   flowsint-app:
     image: ghcr.io/reconurge/flowsint-app:${FLOWSINT_VERSION:-latest}
     container_name: flowsint-app
-    profiles: ["osint"]
+    profiles: ["osint", "flowsint"]
     restart: unless-stopped
     depends_on:
       flowsint-api:
@@ -124,3 +127,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.flowsint.rule=Host(`flowsint.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.flowsint.loadbalancer.server.port=8080"
+      - "homepage.group=OSINT & Cybersécurité"
+      - "homepage.name=Flowsint"
+      - "homepage.icon=mdi-graph"
+      - "homepage.href=http://flowsint.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Plateforme OSINT"

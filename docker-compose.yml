@@ -3,11 +3,12 @@
 #  Reverse proxy : Traefik  →  accès par domaine *.local
 #
 #  Profils disponibles :
-#    - db           : Tout (ou sous-profils : db_postgres, db_mysql, db_redis, db_mongo)
+#    - core         : Homepage (portail central), Traefik (reverse proxy)
+#    - db           : Tout (ou sous-profils : postgres, mysql, redis, mongo)
 #    - db_tools     : phpMyAdmin, pgAdmin, Mongo Express, Adminer
 #    - ai           : OmniRoute (Passerelle IA / LLM Router)
-#    - ops          : Portainer (Docker GUI), Dozzle (Logs en temps réel)
-#    - office       : Stirling-PDF, Reactive Resume, Excalidraw (alias: diagram)
+#    - ops          : Portainer (Docker GUI), Dozzle (Logs en temps réel), Glances (monitoring)
+#    - office       : Stirling-PDF, Reactive Resume, Excalidraw
 #    - api_tools    : Hoppscotch, Swagger Editor, Prism Mock, JSONJoy Builder
 #    - messaging    : Mailpit, RabbitMQ, Soketi
 #    - storage      : MinIO
@@ -18,7 +19,6 @@
 #    - osint        : Flowsint (Neo4j, Redis, PostgreSQL requis)
 #    - sync         : Syncthing
 #    - devtools     : Alias regroupant Portainer, Excalidraw, JSONJoy Builder, OmniRoute
-#    - observability: Alias pour Dozzle
 #
 #  Démarrez toute la stack : docker compose up -d
 #  Ou par profil : docker compose --profile db --profile db_tools up -d
@@ -30,6 +30,7 @@
 name: devstack
 
 include:
+  - internal/composes/homepage.yml
   - internal/composes/traefik.yml
   - internal/composes/db.yml
   - internal/composes/db_tools.yml

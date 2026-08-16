@@ -4,11 +4,10 @@
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
-
   meilisearch:
     image: getmeili/meilisearch:v1.12
     container_name: meilisearch
-    profiles: ["search"]
+    profiles: ["search", "meilisearch"]
     environment:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-${GLOBAL_PASSWORD}}
     volumes:
@@ -19,4 +18,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.meilisearch.rule=Host(`search.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.meilisearch.loadbalancer.server.port=7700"
+      - "homepage.group=Recherche"
+      - "homepage.name=Meilisearch"
+      - "homepage.icon=meilisearch.png"
+      - "homepage.href=http://search.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Moteur de recherche full-text"
     restart: unless-stopped

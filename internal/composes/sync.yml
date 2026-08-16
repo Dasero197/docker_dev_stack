@@ -4,11 +4,10 @@
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
-
   syncthing:
     image: lscr.io/linuxserver/syncthing:latest
     container_name: syncthing
-    profiles: ["sync"]
+    profiles: ["sync", "syncthing"]
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -28,4 +27,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.syncthing.rule=Host(`syncthing.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.syncthing.loadbalancer.server.port=8384"
+      - "homepage.group=Synchronisation"
+      - "homepage.name=Syncthing"
+      - "homepage.icon=mdi-sync"
+      - "homepage.href=http://syncthing.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Synchronisation de fichiers"
     restart: unless-stopped

@@ -4,11 +4,10 @@
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
-
   mailpit:
     image: axllent/mailpit@sha256:0059ef81e492a7192af3816281eed6859eb078bd7bdc58b76757c13e10e53a7d
     container_name: mailpit
-    profiles: ["messaging"]
+    profiles: ["messaging", "mailpit"]
     ports:
       - "1025:1025"
     environment:
@@ -21,12 +20,17 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.mailpit.rule=Host(`mail.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.mailpit.loadbalancer.server.port=8025"
+      - "homepage.group=Messagerie & Événements"
+      - "homepage.name=Mailpit"
+      - "homepage.icon=mailpit.png"
+      - "homepage.href=http://mail.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Serveur SMTP de test"
     restart: unless-stopped
 
   rabbitmq:
     image: rabbitmq:4.1-management-alpine
     container_name: rabbitmq
-    profiles: ["messaging"]
+    profiles: ["messaging", "rabbitmq"]
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-${GLOBAL_USER:-devuser}}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-${GLOBAL_PASSWORD}}
@@ -41,12 +45,17 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
+      - "homepage.group=Messagerie & Événements"
+      - "homepage.name=RabbitMQ"
+      - "homepage.icon=rabbitmq.png"
+      - "homepage.href=http://rabbitmq.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Broker de messages"
     restart: unless-stopped
 
   soketi:
     image: quay.io/soketi/soketi@sha256:fe7e68cdec157343b40cdbe604dd3ca2788d3fbf5624d3ab8f085b623d700ece
     container_name: soketi
-    profiles: ["messaging"]
+    profiles: ["messaging", "soketi"]
     environment:
       SOKETI_DEFAULT_APP_ID: ${SOKETI_DEFAULT_APP_ID:-devapp}
       SOKETI_DEFAULT_APP_KEY: ${SOKETI_DEFAULT_APP_KEY:-devkey}
@@ -60,4 +69,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.soketi.rule=Host(`soketi.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.soketi.loadbalancer.server.port=9601"
+      - "homepage.group=Messagerie & Événements"
+      - "homepage.name=Soketi"
+      - "homepage.icon=mdi-web"
+      - "homepage.href=http://soketi.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=WebSockets (compatible Pusher)"
     restart: unless-stopped

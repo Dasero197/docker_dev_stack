@@ -8,11 +8,10 @@ include:
   - ./db.yml
 
 services:
-
   phpmyadmin:
     image: phpmyadmin@sha256:85a2b4eb2da6ca24d8966b211f83906bf9c3cc57f53f1d4f729b4b85395d389d
     container_name: phpmyadmin
-    profiles: ["db_tools"]
+    profiles: ["db_tools", "phpmyadmin"]
     environment:
       PMA_HOST: mysql
       PMA_PORT: 3306
@@ -30,12 +29,17 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
+      - "homepage.group=Administration BDD"
+      - "homepage.name=phpMyAdmin"
+      - "homepage.icon=phpmyadmin.png"
+      - "homepage.href=http://phpmyadmin.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Admin MySQL"
     restart: unless-stopped
 
   pgadmin:
     image: dpage/pgadmin4@sha256:cefc4cc6b7d9d71a9e81e76fb9d7e14038ab5661b539a190eea1b63fa612589a
     container_name: pgadmin
-    profiles: ["db_tools"]
+    profiles: ["db_tools", "pgadmin"]
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-dev@${DOMAIN_SUFFIX:-local}.dev}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-${GLOBAL_PASSWORD}}
@@ -52,13 +56,18 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
+      - "homepage.group=Administration BDD"
+      - "homepage.name=pgAdmin"
+      - "homepage.icon=pgadmin.png"
+      - "homepage.href=http://pgadmin.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Admin PostgreSQL"
     restart: unless-stopped
 
   # ⚠ Image dépréciée
   mongo-express:
     image: mongo-express:1.0.2
     container_name: mongo-express
-    profiles: ["db_tools"]
+    profiles: ["db_tools", "mongo_express"]
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME:-${GLOBAL_USER:-devuser}}
       ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-${GLOBAL_PASSWORD}}
@@ -80,12 +89,17 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.mongo-express.rule=Host(`mongo.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"
+      - "homepage.group=Administration BDD"
+      - "homepage.name=Mongo Express"
+      - "homepage.icon=mdi-mongodb"
+      - "homepage.href=http://mongo.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Admin MongoDB"
     restart: unless-stopped
 
   adminer:
     image: adminer@sha256:cc64d253db4f016cbcff2ff2f01e60ed07e74f38b4398f84d3c4fae4b5ce0e07
     container_name: adminer
-    profiles: ["db_tools"]
+    profiles: ["db_tools", "adminer"]
     environment:
       ADMINER_DEFAULT_SERVER: mysql
       ADMINER_DESIGN: "dracula"
@@ -95,4 +109,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.adminer.rule=Host(`adminer.${DOMAIN_SUFFIX:-local}`)"
       - "traefik.http.services.adminer.loadbalancer.server.port=8080"
+      - "homepage.group=Administration BDD"
+      - "homepage.name=Adminer"
+      - "homepage.icon=adminer.png"
+      - "homepage.href=http://adminer.${DOMAIN_SUFFIX:-local}"
+      - "homepage.description=Admin BDD léger"
     restart: unless-stopped
