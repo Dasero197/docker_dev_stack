@@ -46,6 +46,7 @@ include:
   - internal/composes/code_quality.yml
   - internal/composes/osint.yml
   - internal/composes/sync.yml
+  - internal/composes/backups.yml
 
 networks:
   devnet:

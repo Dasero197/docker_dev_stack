@@ -4,6 +4,7 @@
 !.env.example
 
 # Local data
+backups/
 
 # Notebooks
 notebooks/*

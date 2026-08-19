@@ -48,6 +48,51 @@ Ensuite, éditez `./.env` et ajoutez (ou modifiez) les profils que vous souhaite
 COMPOSE_PROFILES=db,api_tools,devtools,office
 ```
 
+### Sauvegarde automatique des volumes
+
+Le profil `autobackup` utilise [offen/docker-volume-backup](https://github.com/offen/docker-volume-backup). Toute sa configuration se trouve dans `.env`; le fichier [`.env.example`](.env.example) contient la liste complète des variables, leur valeur par défaut et les commentaires d’utilisation.
+
+#### Activer ou désactiver
+
+Ajoutez `autobackup` à `COMPOSE_PROFILES` :
+
+```env
+COMPOSE_PROFILES=autobackup,db,api_tools,devtools,office
+```
+
+Puis démarrez la stack :
+
+```bash
+docker compose up -d
+```
+
+Pour désactiver les sauvegardes, retirez uniquement `autobackup` de `COMPOSE_PROFILES`, puis relancez `docker compose up -d`. Le service sauvegarde localement dans `./backups/`, un dossier ignoré par Git.
+
+#### Configuration rapide
+
+Les variables les plus courantes sont :
+
+| Variable | Rôle | Exemple |
+| --- | --- | --- |
+| `BACKUP_CRON_EXPRESSION` | Fréquence cron ou `@daily`, `@hourly` | `@daily` |
+| `BACKUP_RETENTION_DAYS` | Nombre de jours conservés, `-1` désactive la rotation | `30` |
+| `BACKUP_COMPRESSION` | Compression `gz`, `zst` ou `none` | `zst` |
+| `BACKUP_ARCHIVE` | Chemin interne de l’archive locale | `/archive` |
+| `AWS_S3_BUCKET_NAME` | Active la destination S3 si renseignée | `my-backups` |
+| `AWS_S3_PATH` | Dossier dans le bucket S3 | `devstack` |
+| `NOTIFICATION_URLS` | Notifications Shoutrrr | `smtp://...` |
+| `GPG_PASSPHRASE` ou `AGE_PASSPHRASE` | Chiffrement optionnel | valeur secrète |
+
+Les backends S3, WebDAV, SSH/SFTP, Azure Blob, Dropbox et Google Drive sont configurables dans `.env.example`. Laisser leurs variables d’activation vides désactive ces destinations. Les secrets peuvent utiliser les variantes `_FILE` prévues par l’image.
+
+#### Volumes sauvegardés
+
+Les volumes nommés de la Dev Stack sont montés dans le service par défaut. Pour sauvegarder un volume d’un autre projet, ajoutez-le dans `internal/composes/backups.yml` sous `services.autobackup.volumes`, par exemple :
+
+```yaml
+- mon_volume_externe:/backup/mon_volume_externe:ro
+```
+
 Configurez au minimum ces variables dans `./.env` (valeurs de fallback par défaut si variables spécifiques laissées vides) :
 
 - `GLOBAL_USER=`

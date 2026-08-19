@@ -1,0 +1,128 @@
+services:
+  autobackup:
+    image: offen/docker-volume-backup:v2.48.2
+    container_name: devstack-autobackup
+    profiles: ["autobackup"]
+    restart: unless-stopped
+    environment:
+      # Configurations générales et cron
+      BACKUP_CRON_EXPRESSION: ${BACKUP_CRON_EXPRESSION:-0 0 * * *}
+      BACKUP_JITTER: ${BACKUP_JITTER:-0s}
+      BACKUP_COMPRESSION: ${BACKUP_COMPRESSION:-gz}
+      GZIP_PARALLELISM: ${GZIP_PARALLELISM:-0}
+      BACKUP_FILENAME: ${BACKUP_FILENAME:-backup-%Y-%m-%dT%H-%M-%S.tar.gz}
+      BACKUP_FILENAME_EXPAND: ${BACKUP_FILENAME_EXPAND:-false}
+      BACKUP_LATEST_SYMLINK: ${BACKUP_LATEST_SYMLINK:-latest.tar.zst}
+      BACKUP_FROM_SNAPSHOT: ${BACKUP_FROM_SNAPSHOT:-false}
+      BACKUP_SOURCES: ${BACKUP_SOURCES:-/backup}
+      BACKUP_EXCLUDE_REGEXP: ${BACKUP_EXCLUDE_REGEXP:-}
+      BACKUP_SKIP_BACKENDS_FROM_PRUNE: ${BACKUP_SKIP_BACKENDS_FROM_PRUNE:-}
+      BACKUP_ARCHIVE: ${BACKUP_ARCHIVE:-/archive}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:--1}
+      BACKUP_PRUNING_LEEWAY: ${BACKUP_PRUNING_LEEWAY:-0s}
+      BACKUP_PRUNING_PREFIX: ${BACKUP_PRUNING_PREFIX:-}
+
+      # AWS / S3 Storage (AWS_PART_SIZE est un int64 -> 0)
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-}
+      AWS_S3_PATH: ${AWS_S3_PATH:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_IAM_ROLE_ENDPOINT: ${AWS_IAM_ROLE_ENDPOINT:-}
+      AWS_ENDPOINT: ${AWS_ENDPOINT:-}
+      AWS_ENDPOINT_PROTO: ${AWS_ENDPOINT_PROTO:-https}
+      AWS_ENDPOINT_INSECURE: ${AWS_ENDPOINT_INSECURE:-false}
+      AWS_ENDPOINT_CA_CERT: ${AWS_ENDPOINT_CA_CERT:-}
+      AWS_STORAGE_CLASS: ${AWS_STORAGE_CLASS:-}
+      AWS_PART_SIZE: ${AWS_PART_SIZE:-0}
+
+      # WebDAV
+      WEBDAV_URL: ${WEBDAV_URL:-}
+      WEBDAV_PATH: ${WEBDAV_PATH:-}
+      WEBDAV_USERNAME: ${WEBDAV_USERNAME:-}
+      WEBDAV_PASSWORD: ${WEBDAV_PASSWORD:-}
+      WEBDAV_URL_INSECURE: ${WEBDAV_URL_INSECURE:-false}
+
+      # SSH / SFTP (SSH_PORT est un int -> 22)
+      SSH_HOST_NAME: ${SSH_HOST_NAME:-}
+      SSH_PORT: ${SSH_PORT:-22}
+      SSH_REMOTE_PATH: ${SSH_REMOTE_PATH:-}
+      SSH_USER: ${SSH_USER:-}
+      SSH_PASSWORD: ${SSH_PASSWORD:-}
+      SSH_IDENTITY_FILE: ${SSH_IDENTITY_FILE:-}
+      SSH_IDENTITY_PASSPHRASE: ${SSH_IDENTITY_PASSPHRASE:-}
+
+      # Azure Blob Storage
+      AZURE_STORAGE_ACCOUNT_NAME: ${AZURE_STORAGE_ACCOUNT_NAME:-}
+      AZURE_STORAGE_PRIMARY_ACCOUNT_KEY: ${AZURE_STORAGE_PRIMARY_ACCOUNT_KEY:-}
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}
+      AZURE_STORAGE_CONTAINER_NAME: ${AZURE_STORAGE_CONTAINER_NAME:-}
+      AZURE_STORAGE_ENDPOINT: ${AZURE_STORAGE_ENDPOINT:-}
+      AZURE_STORAGE_ACCESS_TIER: ${AZURE_STORAGE_ACCESS_TIER:-}
+
+      # Dropbox (DROPBOX_CONCURRENCY_LEVEL est un NaturalNumber -> 1)
+      DROPBOX_REMOTE_PATH: ${DROPBOX_REMOTE_PATH:-}
+      DROPBOX_APP_KEY: ${DROPBOX_APP_KEY:-}
+      DROPBOX_APP_SECRET: ${DROPBOX_APP_SECRET:-}
+      DROPBOX_CONCURRENCY_LEVEL: ${DROPBOX_CONCURRENCY_LEVEL:-1}
+      DROPBOX_REFRESH_TOKEN: ${DROPBOX_REFRESH_TOKEN:-}
+
+      # Google Drive
+      GOOGLE_DRIVE_CREDENTIALS_JSON: ${GOOGLE_DRIVE_CREDENTIALS_JSON:-}
+      GOOGLE_DRIVE_FOLDER_ID: ${GOOGLE_DRIVE_FOLDER_ID:-}
+      GOOGLE_DRIVE_TEAM_DRIVE_ID: ${GOOGLE_DRIVE_TEAM_DRIVE_ID:-}
+      GOOGLE_DRIVE_IMPERSONATE_SUBJECT: ${GOOGLE_DRIVE_IMPERSONATE_SUBJECT:-}
+      GOOGLE_DRIVE_ENDPOINT: ${GOOGLE_DRIVE_ENDPOINT:-}
+      GOOGLE_DRIVE_TOKEN_URL: ${GOOGLE_DRIVE_TOKEN_URL:-}
+
+      # Chiffrement (GPG / Age)
+      GPG_PASSPHRASE: ${GPG_PASSPHRASE:-}
+      GPG_PUBLIC_KEY_RING: ${GPG_PUBLIC_KEY_RING:-}
+      AGE_PASSPHRASE: ${AGE_PASSPHRASE:-}
+      AGE_PUBLIC_KEYS: ${AGE_PUBLIC_KEYS:-}
+
+      # Gestion des conteneurs & Exécution
+      BACKUP_STOP_DURING_BACKUP_LABEL: ${BACKUP_STOP_DURING_BACKUP_LABEL:-docker-volume-backup.stop-during-backup}
+      BACKUP_STOP_DURING_BACKUP_NO_RESTART_LABEL: ${BACKUP_STOP_DURING_BACKUP_NO_RESTART_LABEL:-docker-volume-backup.stop-during-backup-no-restart}
+      BACKUP_STOP_SERVICE_TIMEOUT: ${BACKUP_STOP_SERVICE_TIMEOUT:-60}
+      EXEC_FORWARD_OUTPUT: ${EXEC_FORWARD_OUTPUT:-false}
+      EXEC_LABEL: ${EXEC_LABEL:-docker-volume-backup.exec}
+      DOCKER_HOST: ${DOCKER_HOST:-unix:///var/run/docker.sock}
+      LOCK_TIMEOUT: ${LOCK_TIMEOUT:-0}
+      TIMEZONE: ${TIMEZONE:-UTC}
+
+      # Notifications & Emails (EMAIL_SMTP_PORT est un int -> 587)
+      NOTIFICATION_URLS: ${NOTIFICATION_URLS:-}
+      NOTIFICATION_LEVEL: ${NOTIFICATION_LEVEL:-info}
+      EMAIL_NOTIFICATION_RECIPIENT: ${EMAIL_NOTIFICATION_RECIPIENT:-}
+      EMAIL_NOTIFICATION_SENDER: ${EMAIL_NOTIFICATION_SENDER:-}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-}
+      EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
+      EMAIL_SMTP_USERNAME: ${EMAIL_SMTP_USERNAME:-}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-587}
+    volumes:
+      - mysql_data:/backup/mysql_data:ro
+      - postgres_data:/backup/postgres_data:ro
+      - redis_data:/backup/redis_data:ro
+      - mongo_data:/backup/mongo_data:ro
+      - minio_data:/backup/minio_data:ro
+      - portainer_data:/backup/portainer_data:ro
+      - pgadmin_data:/backup/pgadmin_data:ro
+      - rabbitmq_data:/backup/rabbitmq_data:ro
+      - n8n_data:/backup/n8n_data:ro
+      - jupyter_data:/backup/jupyter_data:ro
+      - meilisearch_data:/backup/meilisearch_data:ro
+      - sonarqube_data:/backup/sonarqube_data:ro
+      - sonarqube_extensions:/backup/sonarqube_extensions:ro
+      - sonarqube_logs:/backup/sonarqube_logs:ro
+      - neo4j_data:/backup/neo4j_data:ro
+      - neo4j_logs:/backup/neo4j_logs:ro
+      - neo4j_import:/backup/neo4j_import:ro
+      - neo4j_plugins:/backup/neo4j_plugins:ro
+      - syncthing_config:/backup/syncthing_config:ro
+      - stirling_data:/backup/stirling_data:ro
+      - reactive_resume_data:/backup/reactive_resume_data:ro
+      - omniroute_data:/backup/omniroute_data:ro
+      - ../../backups:/archive
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - devnet
