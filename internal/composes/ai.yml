@@ -11,7 +11,9 @@ include:
 
 services:
   omniroute:
-    image: diegosouzapw/omniroute:latest
+    build:
+      context: ../..
+      dockerfile: internal/dockerfile/omniroute.dockerfile
     container_name: omniroute
     profiles: ["ai", "omniroute", "devtools"]
     env_file:
@@ -26,6 +28,7 @@ services:
       - INITIAL_PASSWORD=${OMNIROUTE_INITIAL_PASSWORD:-${GLOBAL_PASSWORD}}
       - NEXT_PUBLIC_BASE_URL=http://omniroute.${DOMAIN_SUFFIX:-local}
       - BASE_URL=http://omniroute.${DOMAIN_SUFFIX:-local}
+      - HIDE_PAID_ONLY_MODELS=${HIDE_PAID_ONLY_MODELS:-true}
       - AUTH_COOKIE_SECURE=false
       - NODE_ENV=production
     volumes:
